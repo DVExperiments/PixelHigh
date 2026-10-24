@@ -1,0 +1,100 @@
+/* Pixel High. Glacial's tokens, so the Senate's laws restyle the school too. */
+:root {
+  --bg: #E6ECEE; --surface: #F3F6F7; --ink: #14212A; --muted: #536370; --line: #C3CED3; --line-soft: #D6DEE2;
+  --link: #1C5AB3; --screen: #0E171C; --bezel: #1E2A31; --focus: #1C5AB3;
+  --display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --wrap: 1160px;
+  --R: #E5484D; --G: #3FB566; --B: #3D7FE0; --A: #B9C3CA;
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #10181D; --surface: #162128; --ink: #E1E9EC; --muted: #93A4AE; --line: #2C3A42; --line-soft: #202C33; --link: #82B6FF; --screen: #0A1115; --bezel: #24323A; --focus: #82B6FF; color-scheme: dark; }
+}
+*, *::before, *::after { box-sizing: inherit; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+a { color: var(--link); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 22px; }
+.skip { position: absolute; left: -9999px; } .skip:focus { left: 12px; top: 12px; z-index: 99; background: var(--surface); padding: 8px 12px; }
+.muted { color: var(--muted); }
+.banner { margin-top: 14px; padding: 10px 14px; border-left: 4px solid var(--link); background: var(--surface); }
+
+/* ------------------------------------------------ the school's own header */
+.school-head { border-bottom: 1px solid var(--line); }
+.head-inner { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px 28px; flex-wrap: wrap; padding-top: 22px; }
+.crest-link { display: flex; align-items: center; gap: 14px; color: var(--ink); text-decoration: none; padding-bottom: 12px; }
+.crest { display: grid; grid-template-columns: 1fr 1fr; width: 40px; height: 40px; gap: 2px; padding: 2px; background: var(--screen); border-radius: 4px; }
+.crest i { background: var(--c); }
+.school-name { font: 800 1.6rem/1 var(--display); letter-spacing: -0.02em; }
+.school-name small { display: block; font: 500 0.875rem var(--body); color: var(--muted); letter-spacing: 0; margin-top: 4px; font-style: italic; }
+.tabs { display: flex; gap: 2px 18px; flex-wrap: wrap; }
+.tabs a { color: var(--muted); text-decoration: none; padding: 10px 0 12px; border-bottom: 3px solid transparent; font-weight: 500; }
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* ------------------------------------------------ pages */
+.page-head { padding: 34px 0 18px; }
+.kicker { margin: 0 0 8px; color: var(--muted); font-weight: 500; }
+.page-head h1 { font: 800 clamp(2.1rem, 5.5vw, 3.6rem)/1 var(--display); letter-spacing: -0.03em; margin: 0 0 12px; text-wrap: balance; }
+.lede { font-size: 1.15rem; max-width: 44em; margin: 0; }
+h2 { font: 700 1.4rem/1.15 var(--display); margin: 40px 0 12px; }
+.facts { margin: 18px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0 24px; }
+.facts div { padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.facts dt { color: var(--muted); font-size: 0.9rem; }
+.facts dd { margin: 2px 0 0; font: 700 1.3rem/1.2 var(--display); }
+.facts dd small { font: 400 0.9rem var(--body); color: var(--muted); }
+.two { display: grid; grid-template-columns: 1.2fr 1fr; gap: 44px; }
+@media (max-width: 860px) { .two { grid-template-columns: 1fr; gap: 0; } }
+.letter { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 18px 20px; margin-top: 22px; max-width: 44em; }
+.letter p { margin: 0 0 10px; } .letter .sig { margin: 0; font-style: italic; color: var(--muted); }
+.dates, .news { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.dates li, .news li { display: grid; grid-template-columns: 8.5em 1fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
+.dates time, .news time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.houses { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 860px) { .houses { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.house { border-top: 6px solid var(--c); background: var(--surface); border-radius: 0 0 8px 8px; padding: 14px 16px; }
+.house h3 { margin: 0; font: 800 1.4rem var(--display); }
+.house .pts { font: 800 2.2rem/1 var(--display); margin: 8px 0 4px; font-variant-numeric: tabular-nums; }
+.house p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.bar { height: 10px; background: var(--line-soft); margin-top: 8px; } .bar i { display: block; height: 10px; background: var(--c); }
+
+.tiles { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 22px 16px; }
+.tile { display: block; color: var(--ink); text-decoration: none; }
+.sw { display: grid; place-items: center; aspect-ratio: 1; background: var(--screen); border-radius: 6px; margin-bottom: 8px; position: relative; }
+.sw i { position: absolute; left: 41%; top: 41%; width: 18%; height: 18%; background: var(--c); box-shadow: 0 0 14px var(--c); }
+.sw .hs { position: absolute; left: 6px; top: 6px; width: 8px; height: 8px; background: var(--h); }
+.tile b { display: block; font: 700 1rem/1.2 var(--display); }
+.tile span { display: block; color: var(--muted); font-size: 0.875rem; }
+.tile:hover b { text-decoration: underline; }
+.yeartabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 18px; }
+.yeartabs a { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); text-decoration: none; font-weight: 500; font-variant-numeric: tabular-nums; }
+.yeartabs a[aria-current="page"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.pager { display: flex; justify-content: space-between; margin-top: 24px; }
+.search { display: flex; gap: 8px; max-width: 28rem; margin: 6px 0 18px; }
+.search input { flex: 1; min-width: 0; font: inherit; padding: 9px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); color: var(--ink); }
+.search button { font: 600 0.95rem var(--body); padding: 0 16px; border: 0; border-radius: 4px; background: var(--ink); color: var(--bg); cursor: pointer; }
+
+.profile { display: grid; grid-template-columns: 180px 1fr; gap: 28px; align-items: end; padding: 30px 0 6px; }
+@media (max-width: 600px) { .profile { grid-template-columns: 100px 1fr; gap: 16px; } }
+.profile .sw { margin: 0; }
+.profile .sw i { left: 39%; top: 39%; width: 22%; height: 22%; }
+.table-wrap { overflow-x: auto; }
+table.data { width: 100%; border-collapse: collapse; font-size: 0.97rem; }
+.data th, .data td { padding: 9px 12px 9px 0; text-align: left; border-bottom: 1px solid var(--line-soft); white-space: nowrap; }
+.data th { font-weight: 500; color: var(--muted); font-size: 0.88rem; border-bottom: 1px solid var(--line); }
+.g { display: inline-block; min-width: 2.2em; text-align: center; font-weight: 700; border-radius: 3px; padding: 1px 6px; }
+.g.E { background: #3FB566; color: #0E171C; } .g.M { background: #9BE22D; color: #0E171C; } .g.A { background: #F2D024; color: #0E171C; } .g.N { background: var(--line); color: var(--ink); }
+.chip { display: inline-block; width: 0.75em; height: 0.75em; background: var(--c); margin-right: 0.4em; vertical-align: -0.02em; }
+
+.crown { display: grid; grid-template-columns: 200px 1fr; gap: 28px; align-items: center; background: var(--screen); color: #E1E9EC; border-radius: 12px; padding: 24px; margin-top: 18px; }
+@media (max-width: 600px) { .crown { grid-template-columns: 1fr; } }
+.crown .sw { margin: 0; background: #162128; }
+.crown h2 { margin: 0 0 6px; color: #E1E9EC; }
+.crown p { margin: 0; color: #A9B8C0; }
+.sup { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0 28px; }
+.sup li { padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+.sup li span { display: block; color: var(--muted); font-size: 0.9rem; }
+.foot { margin-top: 56px; padding-top: 16px; padding-bottom: 40px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }

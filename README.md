@@ -1,0 +1,33 @@
+# Pixel High School
+
+*Every pixel counts.* The secondary school of Pixel City. Follows the [Pixel Universe Shared Conventions](../Pixel_Universe_Shared_Conventions.md). Published at `dvexperiments.github.io/PixelHigh/`.
+
+## How it works
+
+- **Opening:** 8:30am city time on Monday 16 November 2026, in Term 4. Its plot on the City map becomes the school building at that moment.
+- **Students:** every census resident in Years 9 to 13. Year level = school year − birth year − 4, as in New Zealand, and the Class of a student is their birth year + 17. Students join and leave as their households move.
+- **Calendar:** city time and four terms, from the first Monday of February to mid-December, with two-week breaks. 2026 is a short first year: one term, from opening day to 17 December.
+- **Houses:** Red, Green, Blue and Alpha, assigned for life. Points come from sports day, the production, each term's results and the prom, and the House Cup is presented at prize-giving.
+- **Subjects:** Years 9–10 take the core (English, Mathematics, Colour Science, Pixel History, Civics, PE). Years 11–13 take English and five options chosen by aptitude, including Probability (with the Bookmaker), Applied Dithering, Typography and Kerning, Racing Studies, Meteorology, Media Studies and Music Technology.
+- **Grades:** NCEA-style Excellence, Merit, Achieved and Not Achieved, from each student's census traits plus a little luck. Results come at the end of Terms 1–3, in end-of-year reports (Years 9–10) and as NCEA external results in mid-January (Years 11–13).
+- **Staff:** working-age residents, one teacher for every sixteen students. The principal is the first of them aged 45 or over. When staff move away, others take their places.
+- **The year's events:** sports day (Term 1), the production (Term 3), end-of-year exams, the Year 13 prom (the Saturday before the last day, with a Prom Pixel and a court), prize-giving (Dux, proxime accessit, subject cups, awards, the House Cup), the yearbook with class superlatives, and storm closures.
+- **City life:** on school days, teenagers on the City map walk to Pixel High, eat lunch on the field and walk home after the last bell.
+
+## API (`window.PixelUniverse.school`)
+
+| Member | Returns |
+| --- | --- |
+| `stateAt(t)` | Term and week, whether lessons are on, the roll by year, the principal, house points, the calendar, the prom and prize-giving |
+| `eventsBetween(from, to)` | `school.opens`, `term.start`/`term.end`, `sports.day`, `production`, `exams.start`, `prom.tonight`, `prom.crowned`, `prizegiving`, `results`, `school.closed` |
+| `rollAt(t)` | Every student on the roll: `{ id, year, home }` |
+| `recordFor(id, year)` | A student's house, form, subjects, abilities, attendance and class |
+| `gradesOf(id, year, t)` | Their grades released by time `t` |
+| `inSession(t)`, `where(t)`, `yearOf(year)` | The calendar |
+| `staffAt(t)`, `housePoints(year, t)`, `promOf(year, t)`, `prizeGiving(year, t)`, `yearbook(classOf, t)` | The rest |
+
+Load after Weather, Senate, City's `universe.js` and `census.js`.
+
+## Pages
+
+`#/` home, `#/students[/<year>]`, `#/student/<id>`, `#/houses`, `#/calendar`, `#/prom`, `#/yearbook[/<class>]`, `#/staff`. Add `?at=2026-12-13T10:00` (city time) to visit another moment.
