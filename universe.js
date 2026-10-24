@@ -234,6 +234,19 @@
     const d = cityDayStart(t);
     if (staffCache.has(d)) return staffCache.get(d);
     const K = U().census, roll = rollAt(t).length || 4200;
+    // from the Life Cycle's start, the Job Centre's records say who works here
+    const L = U().labour;
+    if (L && L.ready() && t >= L.start) {
+      const school = L.employers().filter((e) => e.feature && e.feature.type === 'school')[0];
+      const ids = school ? L.staffOf(school.id, d + 12 * H) : [];
+      const keys0 = Object.keys(SUBJECTS);
+      const teachers = ids.map((id) => ({ id, age: Math.floor((d - K.character(id).birth) / 31557600000), subject: keys0[hash('school:teaches:' + id) % keys0.length] }))
+        .sort((a, b) => unit('teacher:' + a.id) - unit('teacher:' + b.id));
+      const out = { principal: teachers.filter((x) => x.age >= 45)[0] || teachers[0] || null, teachers };
+      if (staffCache.size > 10) staffCache.clear();
+      staffCache.set(d, out);
+      return out;
+    }
     const need = Math.ceil(roll / 16);
     const cands = [];
     for (const h of K.homes()) for (const m of K.householdAt(h.i, d + 12 * H).members) {
@@ -374,6 +387,12 @@
         for (const s of sample) { const rec = recordFor(s.id, Y); if (!rec) continue; const a = assessments(Y).filter((x) => x.external)[0]; for (const k of rec.subjects) { n++; if (grade(rec, k, a) !== 'N') pass++; } }
         emit(cal.results + 8 * H, 'results', 2, Y + ':results', { passRate: n ? Math.round(pass / n * 100) : null }, 'NCEA results are out: Pixel High students achieve ' + (n ? Math.round(pass / n * 100) : '?') + '% of their external standards');
       }
+    }
+    // the Life Cycle: the Job Centre's records settle the staff list, and perhaps the principal
+    const L = U().labour;
+    if (L && L.start >= from && L.start < to) {
+      const before = staffAt(L.start - DAY).principal, after = staffAt(L.start + H).principal;
+      if (before && after && before.id !== after.id) { const K = U().census; emit(L.start + 9 * H, 'staff.restructure', 2, 'restructure', { principal: after.id }, 'Pixel High’s staff list is settled by the Job Centre’s records, and ' + K.summary(after.id, L.start).name + ' becomes principal'); }
     }
     // storm closures, on school days only
     for (let d = cityDayStart(Math.max(from, OPENS)); d < to; d += DAY) {
