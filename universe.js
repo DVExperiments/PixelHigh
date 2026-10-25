@@ -1,9 +1,12 @@
 /*
  * Pixel High: the city's secondary school.
  *
- * Every resident of Pixel City in Years 9 to 13 is a student, read from the Census Office: the Year level is the
- * school year minus the birth year minus four, as in New Zealand. Students arrive and leave as their families move.
- * The school keeps city time and a New Zealand year of four terms, from February to December.
+ * Every resident of Pixel City in Years 9 to 13 is a student, read from the Census Office. The school year is a Pixel
+ * Year (one calendar month): after an opening term in November 2026 (Pixel Year 12), every Pixel Year from Year 13 is a
+ * school year of four terms, laid out on the pixel days as a New Zealand year is on the calendar (February to
+ * December). A student's Year level is their age at the end of the school year, on the census's life clock, minus
+ * four, as in New Zealand. Lessons keep city time: the bell goes at 8:45 on real weekdays during a term, and each of
+ * the year's big days falls on the real day its pixel date begins. Students arrive and leave as their families move.
  *
  * Everything is a pure function of time: houses, subjects, grades, sports day, the production, the prom and the
  * prize-giving come out the same for every visitor. Grades grow from each student's character in the census.
@@ -14,7 +17,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = '0.1.0';
+  const VERSION = '0.2.0';
   const MIN = 60000, H = 3600000, DAY = 86400000, WEEK = 7 * DAY;
   const CITY = 12 * H;                        // the school keeps City Standard Time (it opens after the Renewal)
   const OPENS_DATE = [2026, 10, 16];           // Monday 16 November 2026, city date
@@ -47,48 +50,60 @@
   const ymd = (t) => { const d = cityDate(t); return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); };
 
   const U = () => root.PixelUniverse || {};
+  // the Pixel Calendar, from the Weather Bureau
+  const PX = () => U().climate.pixel;
+  const FIRST_YEAR = 12;                       // the opening term, November 2026
+  const ADOPTED = Date.UTC(2026, 11, 1);
+  /** The school year at time t: a Pixel Year. */
+  const schoolYearOf = (t) => (t < ADOPTED ? FIRST_YEAR : PX().time(t).year);
+  const yearName = (Y) => 'Pixel Year ' + Y;
   const ok = (x) => !!(x && (!x.ready || x.ready()));
-  const ready = () => ok(U().census) && ok(U().city);
+  const ready = () => ok(U().census) && ok(U().city) && !!(U().climate && U().climate.pixel);
 
   // ================================================================ the calendar
   const day = (y, m, d) => cityMidnight(y, m, d);
   function firstWeekdayOnOrAfter(y, m, d, wd) { let t = day(y, m, d); while (cityDate(t).getUTCDay() !== wd) t += DAY; return t; }
   function lastWeekdayOnOrBefore(y, m, d, wd) { let t = day(y, m, d); while (cityDate(t).getUTCDay() !== wd) t -= DAY; return t; }
   const calCache = new Map();
-  /** The school year Y: four terms of about ten weeks, and the year's fixed events. Times are city midnights. */
+  // The pixel days of a school year, as a New Zealand year sits on the calendar: four terms of 67 pixel days with 17-day
+  // holidays between them, from day 33 (early in the second month) to day 347 (mid-way through the twelfth).
+  const TERM_DAYS = [[32, 98], [116, 182], [200, 266], [284, 346]];
+  /** The real city day on which pixel day `doy` of Pixel Year Y begins, as a city midnight. */
+  const pday = (Y, doy) => cityDayStart(PX().moment(Y, doy));
+  /**
+   * The school year Y: its terms and the year's fixed events. Times are city midnights: each falls on the real day its
+   * pixel date begins, and lessons and evenings keep city time on that day. Pixel Year 12 is the opening term.
+   */
   function yearOf(Y) {
     if (calCache.has(Y)) return calCache.get(Y);
-    let terms;
-    if (Y === 2026) terms = [{ n: 4, start: day(2026, 10, 16), end: day(2026, 11, 17) }];
-    else {
-      const t1 = firstWeekdayOnOrAfter(Y, 1, 2, 1);
-      terms = [];
-      let s = t1;
-      for (let n = 1; n <= 4; n++) {
-        const e = n < 4 ? s + 10 * WEEK - 3 * DAY : lastWeekdayOnOrBefore(Y, 11, 17, 4);
-        terms.push({ n, start: s, end: e });
-        s = e + 3 * DAY + 2 * WEEK;
-      }
+    let ev;
+    if (Y <= FIRST_YEAR) {
+      const terms = [{ n: 4, start: day(2026, 10, 16), end: day(2026, 10, 27), first: 0, last: 0 }];
+      ev = { terms, prize: day(2026, 10, 27), prom: day(2026, 10, 21), sports: day(2026, 10, 20), production: null, exams: day(2026, 10, 23), results: pday(FIRST_YEAR + 1, 12) };
+    } else {
+      const terms = TERM_DAYS.map(([a, b], i) => ({ n: i + 1, start: pday(Y, a), end: pday(Y, b), first: a, last: b }));
+      ev = {
+        terms,
+        prize: terms[3].end,                                  // the last day of the year
+        prom: pday(Y, 334),                                   // a real day or so before
+        sports: pday(Y, 63),                                  // a month into Term 1
+        production: pday(Y, 251),                             // late in Term 3
+        exams: pday(Y, 305),                                  // end-of-year exams begin
+        results: pday(Y + 1, 12)                              // NCEA results, early in the next Pixel Year
+      };
     }
-    const T = (n) => terms.filter((x) => x.n === n)[0];
-    const prize = T(4).end;                                   // the last day of the year
-    const prom = prize - 5 * DAY;                             // the Saturday before
-    const ev = {
-      terms, prize, prom,
-      sports: T(1) ? T(1).start + 4 * WEEK + 3 * DAY : T(4).start + 4 * DAY,   // 2026: an opening-week relay
-      production: T(3) ? T(3).start + 7 * WEEK + 2 * DAY : null,
-      exams: T(4) ? T(4).start + (Y === 2026 ? 1 : 3) * WEEK : null,          // end-of-year exams begin
-      results: firstWeekdayOnOrAfter(Y + 1, 0, 13, 3)                          // NCEA results, the next January
-    };
+    ev.year = Y; ev.name = yearName(Y);
     calCache.set(Y, ev);
     return ev;
   }
   /** Which school year a moment belongs to, and where in it we are. */
   function where(t) {
-    const Y = cityDate(t).getUTCFullYear(), cal = yearOf(Y), d = cityDayStart(t);
+    const Y = schoolYearOf(t), cal = yearOf(Y), d = cityDayStart(t);
     for (const tr of cal.terms) if (d >= tr.start && d <= tr.end) {
       const wd = cityDate(t).getUTCDay();
-      return { Y, cal, term: tr.n, week: Math.floor((d - tr.start) / WEEK) + 1, schoolDay: wd >= 1 && wd <= 5 };
+      // the week of term counts pixel weeks under the Pixel Calendar (each about fourteen real hours)
+      const week = Y <= FIRST_YEAR ? Math.floor((d - tr.start) / WEEK) + 1 : Math.floor((Math.min(Math.max(PX().time(t).dayOfYear, tr.first), tr.last) - tr.first) / 7) + 1;
+      return { Y, cal, term: tr.n, week, schoolDay: wd >= 1 && wd <= 5 };
     }
     return { Y, cal, term: null, week: null, schoolDay: false };
   }
@@ -137,21 +152,25 @@
   const GRADE_NAME = { E: 'Excellence', M: 'Merit', A: 'Achieved', N: 'Not Achieved' };
   const GRADE_POINTS = { E: 4, M: 3, A: 2, N: 0 };
 
-  const yearLevel = (birth, Y) => Y - new Date(birth + CITY).getUTCFullYear() - 4;
-  const classOf = (birth) => new Date(birth + CITY).getUTCFullYear() + 17;
+  // A student's Year level: their age at the end of the school year, on the census's life clock, minus four (so a
+  // pixel who turns 17 during a school year is in Year 13), as in New Zealand
+  const yearEnd = (Y) => (Y <= FIRST_YEAR ? ADOPTED : PX().time(PX().moment(Y, 0)).yearEnd) - 1;
+  const yearLevel = (birth, Y) => U().census.ageAt(birth, yearEnd(Y)) - 4;
+  /** The school year in which a pixel is in Year 13: the one in which they turn 17. */
+  const classOf = (birth) => { const lc = U().census.lifeClock; const at = lc.later(birth, 17 * lc.YEAR); return at < ADOPTED ? FIRST_YEAR : PX().time(at).year; };
 
   const rollCache = new Map();
   /** Everyone on the roll at time t: [{ id, year, home }]. Empty before the school opens and outside a school year. */
   function rollAt(t) {
     if (t < OPENS - 8 * H || !ready()) return [];
-    const d = cityDayStart(t);
-    if (rollCache.has(d)) return rollCache.get(d);
-    const K = U().census, Y = cityDate(t).getUTCFullYear();
+    const d = cityDayStart(t), Y = schoolYearOf(t), key = d + ':' + Y; // a Pixel Year turns at noon, city time
+    if (rollCache.has(key)) return rollCache.get(key);
+    const K = U().census;
     const cal = yearOf(Y);
     // after prize-giving the leavers have gone and the school waits for next year's intake
     const effY = d > cal.prize ? null : Y;
     const out = [];
-    if (effY !== null && d >= cal.terms[0].start - 4 * WEEK) {
+    if (effY !== null) {
       for (const h of K.homes()) for (const m of K.householdAt(h.i, d + 12 * H).members) {
         if (d + 12 * H < m.birth) continue;
         const yl = yearLevel(m.birth, effY);
@@ -159,7 +178,7 @@
       }
     }
     if (rollCache.size > 10) rollCache.clear();
-    rollCache.set(d, out);
+    rollCache.set(key, out);
     return out;
   }
 
@@ -219,7 +238,7 @@
     const out = [];
     for (const a of assessments(Y)) {
       if (a.at > t || a.levels.indexOf(rec.year) < 0) continue;
-      if (Y === 2026 && !a.external && a.key !== '2026-ey') continue; // the first year is a short one
+      if (Y === FIRST_YEAR && !a.external && a.key !== FIRST_YEAR + '-ey') continue; // the first year is a short one
       for (const k of rec.subjects) out.push({ assessment: a.name, key: a.key, subject: k, subjectName: SUBJECTS[k].name, grade: grade(rec, k, a) });
     }
     return out;
@@ -240,7 +259,7 @@
       const school = L.employers().filter((e) => e.feature && e.feature.type === 'school')[0];
       const ids = school ? L.staffOf(school.id, d + 12 * H) : [];
       const keys0 = Object.keys(SUBJECTS);
-      const teachers = ids.map((id) => ({ id, age: Math.floor((d - K.character(id).birth) / 31557600000), subject: keys0[hash('school:teaches:' + id) % keys0.length] }))
+      const teachers = ids.map((id) => ({ id, age: K.ageAt(K.character(id).birth, d), subject: keys0[hash('school:teaches:' + id) % keys0.length] }))
         .sort((a, b) => unit('teacher:' + a.id) - unit('teacher:' + b.id));
       const out = { principal: teachers.filter((x) => x.age >= 45)[0] || teachers[0] || null, teachers };
       if (staffCache.size > 10) staffCache.clear();
@@ -250,7 +269,7 @@
     const need = Math.ceil(roll / 16);
     const cands = [];
     for (const h of K.homes()) for (const m of K.householdAt(h.i, d + 12 * H).members) {
-      const age = Math.floor((d - m.birth) / 31557600000);
+      const age = K.ageAt(m.birth, d);
       if (age >= 26 && age <= 64) cands.push([unit('teacher:' + m.id), m.id, age]);
     }
     cands.sort((a, b) => a[0] - b[0]);
@@ -297,7 +316,7 @@
     if (!out.happened) return out;
     const roll = rollAt(cal.prize + 12 * H);
     const seniors = roll.filter((s) => s.year === 13).map((s) => recordFor(s.id, Y)).filter(Boolean);
-    const avg = (rec) => { const gs = []; for (const a of assessments(Y)) if (a.at <= at && a.levels.indexOf(13) >= 0 && !a.external && (Y !== 2026)) for (const k of rec.subjects) gs.push({ grade: grade(rec, k, a) }); return gs.length ? avgPoints(gs) : rec.subjects.reduce((s, k) => s + rec.ability[k], 0) / rec.subjects.length * 4; };
+    const avg = (rec) => { const gs = []; for (const a of assessments(Y)) if (a.at <= at && a.levels.indexOf(13) >= 0 && !a.external && (Y !== FIRST_YEAR)) for (const k of rec.subjects) gs.push({ grade: grade(rec, k, a) }); return gs.length ? avgPoints(gs) : rec.subjects.reduce((s, k) => s + rec.ability[k], 0) / rec.subjects.length * 4; };
     const ranked = seniors.map((x) => [x, avg(x) + unit('dux:' + x.id) * 0.01]).sort((a, b) => b[1] - a[1]);
     out.dux = ranked[0] ? brief(ranked[0][0]) : null;
     out.proxime = ranked[1] ? brief(ranked[1][0]) : null;
@@ -358,17 +377,17 @@
     if (!ready() || to < OPENS - DAY) return [];
     const out = [];
     const emit = (ms, type, importance, idPart, data, headline) => { if (ms >= from && ms < to) out.push({ id: 'school:' + idPart, time: iso(ms), source: 'school', type, importance, data, headline }); };
-    const y0 = cityDate(Math.max(from, OPENS)).getUTCFullYear() - 1, y1 = cityDate(to).getUTCFullYear();
-    for (let Y = Math.max(2026, y0); Y <= y1; Y++) {
+    const y0 = schoolYearOf(Math.max(from, OPENS)) - 1, y1 = schoolYearOf(to);
+    for (let Y = Math.max(FIRST_YEAR, y0); Y <= y1; Y++) {
       const cal = yearOf(Y);
-      if (Y === 2026) emit(OPENS, 'school.opens', 4, 'opens', {}, 'Pixel High opens its doors, and ' + (rollAt(OPENS).length || 'four thousand') + ' students find their form rooms');
+      if (Y === FIRST_YEAR) emit(OPENS, 'school.opens', 4, 'opens', {}, 'Pixel High opens its doors, and ' + (rollAt(OPENS).length || 'four thousand') + ' students find their form rooms');
       for (const tr of cal.terms) {
-        if (!(Y === 2026)) emit(tr.start + BELL.start, 'term.start', 2, Y + ':t' + tr.n + ':start', { term: tr.n }, 'Term ' + tr.n + ' begins at Pixel High');
-        emit(tr.end + BELL.end, 'term.end', 1, Y + ':t' + tr.n + ':end', { term: tr.n }, tr.n === 4 ? 'The school year ends at Pixel High' : 'Term ' + tr.n + ' ends at Pixel High; the holidays begin');
+        if (!(Y === FIRST_YEAR)) emit(tr.start + BELL.start, 'term.start', 2, Y + ':t' + tr.n + ':start', { term: tr.n, pixelYear: Y }, 'Term ' + tr.n + ' of ' + yearName(Y) + ' begins at Pixel High');
+        emit(tr.end + BELL.end, 'term.end', 1, Y + ':t' + tr.n + ':end', { term: tr.n, pixelYear: Y }, tr.n === 4 ? yearName(Y) + ' ends at Pixel High' : 'Term ' + tr.n + ' ends at Pixel High; the holidays begin');
       }
       const sports = houseRank('sports:' + Y), sr = seeded('sportsday:' + Y);
       emit(cal.sports + 15 * H, 'sports.day', 2, Y + ':sports', { winner: sports[0].name },
-        (Y === 2026 ? 'The opening-week relay' : 'Sports day') + ' at Pixel High: ' + sports[0].name + ' house wins, with ' + pick(sr, SPORTS) + ' decided by a single pixel');
+        (Y === FIRST_YEAR ? 'The opening-week relay' : 'Sports day') + ' at Pixel High: ' + sports[0].name + ' house wins, with ' + pick(sr, SPORTS) + ' decided by a single pixel');
       if (cal.production) {
         const pr = seeded('production:' + Y), shows = ['Les Misérables (in Sixteen Colours)', 'A Midsummer Night’s Refresh', 'The Phantom of the Overscan', 'Guys and Dither', 'Grease (Anti-Aliased)', 'Into the Woods (Low Resolution)'];
         emit(cal.production + 21 * H, 'production', 2, Y + ':production', {}, 'Pixel High’s production of ' + pick(pr, shows) + ' opens to a full hall');
@@ -377,10 +396,10 @@
       const prom = promOf(Y, to);
       emit(prom.at, 'prom.tonight', 2, Y + ':prom:on', { theme: prom.theme }, 'Pixel High’s Year 13 prom, “' + prom.theme + '”, is tonight at ' + prom.venue);
       if (prom.happened && prom.promPixel) emit(prom.at + 4 * H, 'prom.crowned', 3, Y + ':prom', { promPixel: prom.promPixel.name, attended: prom.attended },
-        prom.promPixel.name + ' (' + prom.promPixel.house + ') is crowned Prom Pixel of the Class of ' + Y + ', in front of ' + prom.attended + ' classmates');
+        prom.promPixel.name + ' (' + prom.promPixel.house + ') is crowned Prom Pixel of the Class of ' + yearName(Y) + ', in front of ' + prom.attended + ' classmates');
       const pg = prizeGiving(Y, to);
       if (pg.happened && pg.dux) emit(pg.at + H, 'prizegiving', 3, Y + ':prize', { dux: pg.dux.name, houseCup: pg.houseCup.name },
-        pg.dux.name + ' is named Dux of Pixel High as the Class of ' + Y + ' graduates; ' + pg.houseCup.name + ' house lifts the House Cup');
+        pg.dux.name + ' is named Dux of Pixel High as the Class of ' + yearName(Y) + ' graduates; ' + pg.houseCup.name + ' house lifts the House Cup');
       if (cal.results + 8 * H < to && cal.results + 8 * H >= from) {
         const sample = rollAt(cal.prize).filter((s) => s.year >= 11).slice(0, 600);
         let pass = 0, n = 0;
@@ -420,7 +439,7 @@
 
   root.PixelUniverse = root.PixelUniverse || {};
   root.PixelUniverse.school = {
-    version: VERSION, source: 'school', startDate: ymd(OPENS), opens: OPENS, ready, HOUSES, SUBJECTS, GRADE_NAME,
+    version: VERSION, source: 'school', startDate: ymd(OPENS), opens: OPENS, ready, HOUSES, SUBJECTS, GRADE_NAME, FIRST_YEAR, yearName, schoolYearOf,
     stateAt, eventsBetween, inSession, where, yearOf, rollAt, recordFor, gradesOf, staffAt, housePoints, promOf, prizeGiving, yearbook, assessments,
     yearLevel, classOf, cityDate
   };

@@ -45,17 +45,17 @@
     const t = now(), st = S.stateAt(t);
     if (!st.started) return head('Pixel High School', status(st) + ' Every resident of Pixel City in Years 9 to 13 will be enrolled.', 'Pixel City');
     const cal = st.calendar, pg = st.prizeGiving;
-    let h = head('Pixel High School', esc(status(st)), 'Pixel City, ' + fLong.format(city(t)));
+    let h = head('Pixel High School', esc(status(st)), 'Pixel City, ' + fLong.format(city(t)) + (st.schoolYear ? '. ' + S.yearName(st.schoolYear) : ''));
     h += '<dl class="facts">' + fact('Students', num(st.roll)) + fact('Teachers', num(st.teachers)) + fact('Principal', st.principal ? '<a href="' + census(st.principal.id) + '">' + esc(st.principal.name) + '</a>' : '') +
       fact('House leading', esc(st.houses[0].name), st.houses[0].points + ' points') + '</dl>';
     if (st.principal) h += '<div class="letter"><p>Welcome to Pixel High, the secondary school of Pixel City. Every one of our ' + num(st.roll) + ' students lives in the city, and every one of them is a pixel. We expect each of them to shine to the best of their ability, and no brighter.</p>' +
-      '<p>Our students learn to read, to reason, to kern, and to wait patiently for the end of a Daily Crawl. ' + (pg.happened ? 'Congratulations to ' + esc(pg.dux.name) + ', our Dux, and to the Class of ' + st.schoolYear + '.' : 'Please remember that the prom is for Year 13 students only, and that the school is not responsible for anything said on Pixel FM.') + '</p>' +
+      '<p>Our students learn to read, to reason, to kern, and to wait patiently for the end of a Daily Crawl. ' + (pg.happened ? 'Congratulations to ' + esc(pg.dux.name) + ', our Dux, and to the Class of ' + S.yearName(st.schoolYear) + '.' : 'Please remember that the prom is for Year 13 students only, and that the school is not responsible for anything said on Pixel FM.') + '</p>' +
       '<p class="sig">' + esc(st.principal.name) + ', Principal</p></div>';
     // upcoming dates
     const dates = [];
     const add = (ms, what) => { if (ms > t) dates.push([ms, what]); };
     for (const tr of cal.terms) { add(tr.start, 'Term ' + tr.n + ' begins'); add(tr.end, 'Term ' + tr.n + ' ends'); }
-    add(cal.sports, st.schoolYear === 2026 ? 'Opening-week relay' : 'Sports day'); if (cal.production) add(cal.production, 'The school production opens'); if (cal.exams) add(cal.exams, 'End-of-year exams begin');
+    add(cal.sports, st.schoolYear === S.FIRST_YEAR ? 'Opening-week relay' : 'Sports day'); if (cal.production) add(cal.production, 'The school production opens'); if (cal.exams) add(cal.exams, 'End-of-year exams begin');
     add(cal.prom, 'Year 13 prom'); add(cal.prize, 'Prize-giving and graduation'); add(cal.results, 'NCEA results released');
     dates.sort((a, b) => a[0] - b[0]);
     const news = S.eventsBetween(t - 45 * DAY, t).reverse().slice(0, 8);
@@ -91,15 +91,15 @@
   }
   function student(id) {
     const t = now(), st = S.stateAt(t);
-    const Y = st.schoolYear || S.cityDate(t).getUTCFullYear();
+    const Y = st.schoolYear || S.schoolYearOf(t);
     let rec = S.recordFor(id, Y), yearUsed = Y;
-    if (!rec) { for (let y = Y - 1; y >= 2026 && !rec; y--) { rec = S.recordFor(id, y); yearUsed = y; } }
+    if (!rec) { for (let y = Y - 1; y >= S.FIRST_YEAR && !rec; y--) { rec = S.recordFor(id, y); yearUsed = y; } }
     if (!rec) return head('Not a student', 'Pixel High has no record of this resident. ' + '<a href="' + census(id) + '">See their census file</a>.');
     const onRoll = S.rollAt(t).some((s) => s.id === id);
     let h = '<div class="profile"><span class="sw" style="--c:' + rec.color + ';--h:' + HOUSE_C[rec.house.name] + '"><i></i><span class="hs"></span></span><div><p class="kicker">' +
-      (onRoll ? 'Year ' + rec.year + ', form ' + rec.form : rec.classOf <= yearUsed ? 'Class of ' + rec.classOf + ', graduated' : 'No longer at Pixel High') + '</p><h1 style="font:800 clamp(2rem,5vw,3.2rem)/1 var(--display);margin:0 0 8px">' + esc(rec.name) + '</h1>' +
+      (onRoll ? 'Year ' + rec.year + ', form ' + rec.form : rec.classOf <= yearUsed ? 'Class of ' + S.yearName(rec.classOf) + ', graduated' : 'No longer at Pixel High') + '</p><h1 style="font:800 clamp(2rem,5vw,3.2rem)/1 var(--display);margin:0 0 8px">' + esc(rec.name) + '</h1>' +
       '<p class="lede" style="font-size:1rem"><a href="' + census(id) + '">Their census file</a>, ' + esc(rec.district) + ' district.</p></div></div>';
-    h += '<dl class="facts">' + fact('House', '<span class="chip" style="--c:' + rec.house.color + '"></span>' + esc(rec.house.name)) + fact('Class of', rec.classOf) + fact('Attendance', rec.attendance + '%') +
+    h += '<dl class="facts">' + fact('House', '<span class="chip" style="--c:' + rec.house.color + '"></span>' + esc(rec.house.name)) + fact('Class of', S.yearName(rec.classOf)) + fact('Attendance', rec.attendance + '%') +
       fact('Best subject', esc(S.SUBJECTS[rec.subjects.slice().sort((a, b) => rec.ability[b] - rec.ability[a])[0]].name)) + '</dl>';
     // grades, by subject and assessment: this year's, and last year's when they're still recent
     const gradesTable = (yr) => {
@@ -110,7 +110,7 @@
       return '<h2>' + yr + ', Year ' + r2.year + '</h2><div class="table-wrap"><table class="data"><thead><tr><th>Subject</th>' + keys.map((k) => '<th>' + esc(names[k]) + '</th>').join('') + '</tr></thead><tbody>' +
         r2.subjects.map((k) => '<tr><td>' + esc(S.SUBJECTS[k].name) + '</td>' + keys.map((key) => { const g = gs.filter((x) => x.key === key && x.subject === k)[0]; return '<td>' + (g ? '<span class="g ' + g.grade + '" title="' + S.GRADE_NAME[g.grade] + '">' + g.grade + '</span>' : '') + '</td>'; }).join('') + '</tr>').join('') + '</tbody></table></div>';
     };
-    const tables = [yearUsed, yearUsed - 1].filter((y) => y >= 2026).map(gradesTable).filter(Boolean);
+    const tables = [yearUsed, yearUsed - 1].filter((y) => y >= S.FIRST_YEAR).map(gradesTable).filter(Boolean);
     h += tables.length ? tables.join('') + '<p class="muted">E Excellence, M Merit, A Achieved, N Not Achieved.</p>'
       : '<h2>Subjects</h2><p class="muted">Studying ' + esc(rec.subjects.map((k) => S.SUBJECTS[k].name).join(', ')) + '. No results have been released yet.</p>';
     // honours
@@ -147,20 +147,20 @@
 
   // ---------------------------------------------------------------- calendar
   function calendar() {
-    const t = now(), Y = Math.max(2026, S.cityDate(t).getUTCFullYear());
+    const t = now(), Y = Math.max(S.FIRST_YEAR, S.schoolYearOf(t));
     let h = head('Calendar', 'The school keeps city time. Four terms, from February to December.', 'Pixel High School');
     for (const y of [Y, Y + 1]) {
       const cal = S.yearOf(y);
       const rows = [];
       for (const tr of cal.terms) rows.push([tr.start, 'Term ' + tr.n, fDay.format(city(tr.start)) + ' to ' + fDay.format(city(tr.end))]);
-      rows.push([cal.sports, y === 2026 ? 'Opening-week relay' : 'Sports day', fDay.format(city(cal.sports))]);
+      rows.push([cal.sports, y === S.FIRST_YEAR ? 'Opening-week relay' : 'Sports day', fDay.format(city(cal.sports))]);
       if (cal.production) rows.push([cal.production, 'School production', fDay.format(city(cal.production))]);
       if (cal.exams) rows.push([cal.exams, 'End-of-year exams begin', fDay.format(city(cal.exams))]);
       rows.push([cal.prom, 'Year 13 prom', fDay.format(city(cal.prom)) + ', 7pm']);
       rows.push([cal.prize, 'Prize-giving and graduation', fDay.format(city(cal.prize)) + ', 7pm']);
-      rows.push([cal.results, 'NCEA results released', fDay.format(city(cal.results)) + ', ' + (y + 1)]);
+      rows.push([cal.results, 'NCEA results released', fDay.format(city(cal.results))]);
       rows.sort((a, b) => a[0] - b[0]);
-      h += '<h2>' + y + (y === 2026 ? ', the school’s first year' : '') + '</h2><div class="table-wrap"><table class="data"><tbody>' + rows.map((r) => '<tr' + (r[0] < t ? ' class="muted"' : '') + '><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td></tr>').join('') + '</tbody></table></div>';
+      h += '<h2>' + S.yearName(y) + (y === S.FIRST_YEAR ? ', the school’s opening term' : '') + '</h2><div class="table-wrap"><table class="data"><tbody>' + rows.map((r) => '<tr' + (r[0] < t ? ' class="muted"' : '') + '><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td></tr>').join('') + '</tbody></table></div>';
     }
     return h;
   }
@@ -170,14 +170,14 @@
     const t = now(), st = S.stateAt(t);
     if (!st.started) return home();
     let Y = st.schoolYear, p = S.promOf(Y, t);
-    if (S.yearOf(Y).prize < t - 40 * DAY && Y > 2026) { Y -= 1; p = S.promOf(Y, t); }
-    let h = head('The ' + Y + ' prom', '“' + esc(p.theme) + '”, at ' + esc(p.venue) + ', on ' + fLong.format(city(p.at)) + ' at ' + fTime.format(city(p.at)) + '. For the Class of ' + Y + '.', 'Pixel High School');
+    if (S.yearOf(Y).prize < t - 3 * DAY && Y > S.FIRST_YEAR) { Y -= 1; p = S.promOf(Y, t); }
+    let h = head('The ' + S.yearName(Y) + ' prom', '“' + esc(p.theme) + '”, at ' + esc(p.venue) + ', on ' + fLong.format(city(p.at)) + ' at ' + fTime.format(city(p.at)) + '. For the Class of ' + S.yearName(Y) + '.', 'Pixel High School');
     if (!p.happened) {
       const days = Math.ceil((p.at - t) / DAY);
       h += '<p class="lede">' + (days > 0 ? days + ' day' + (days === 1 ? '' : 's') + ' to go.' : 'Tonight.') + ' Every Year 13 student is invited. Dress code: full brightness.</p>';
       return h;
     }
-    h += '<div class="crown"><span class="sw" style="--c:' + p.promPixel.color + '"><i></i></span><div><p>Prom Pixel of the Class of ' + Y + '</p><h2>' + link('student/' + p.promPixel.id, esc(p.promPixel.name)) + '</h2><p>' + esc(p.promPixel.house) + ' house, form ' + esc(p.promPixel.form) + '. Crowned in front of ' + num(p.attended) + ' of ' + num(p.eligible) + ' classmates. The last dance was ' + esc(p.lastDance) + '.</p></div></div>';
+    h += '<div class="crown"><span class="sw" style="--c:' + p.promPixel.color + '"><i></i></span><div><p>Prom Pixel of the Class of ' + S.yearName(Y) + '</p><h2>' + link('student/' + p.promPixel.id, esc(p.promPixel.name)) + '</h2><p>' + esc(p.promPixel.house) + ' house, form ' + esc(p.promPixel.form) + '. Crowned in front of ' + num(p.attended) + ' of ' + num(p.eligible) + ' classmates. The last dance was ' + esc(p.lastDance) + '.</p></div></div>';
     h += '<h2>The prom court</h2><ul class="tiles">' + p.court.map((c) => tile({ id: c.id, name: c.name, color: c.color, house: c.house }, c.house + ', ' + c.form)).join('') + '</ul>';
     return h;
   }
@@ -188,9 +188,9 @@
     if (!st.started) return home();
     const Y = +cls || (S.yearOf(st.schoolYear).prize < t ? st.schoolYear : st.schoolYear);
     const yb = S.yearbook(Y, t), pg = S.prizeGiving(Y, t);
-    let h = head('The Class of ' + Y, (yb.graduated ? 'Graduated on ' + fLong.format(city(S.yearOf(Y).prize)) + '. ' : 'Year 13 this year. ') + num(yb.members.length) + ' pixels.', 'The Pixel High yearbook');
-    h += '<nav class="yeartabs" aria-label="Classes">' + [Y - 1, Y, Y + 1].filter((y) => y >= 2026).map((y) => '<a href="' + AT + '#/yearbook/' + y + '"' + (y === Y ? ' aria-current="page"' : '') + '>Class of ' + y + '</a>').join('') + '</nav>';
-    if (pg.happened) h += '<div class="crown"><span class="sw" style="--c:' + pg.dux.color + '"><i></i></span><div><p>Dux of Pixel High, ' + Y + '</p><h2>' + link('student/' + pg.dux.id, esc(pg.dux.name)) + '</h2><p>Proxime accessit: ' + esc(pg.proxime.name) + '. ' + esc(pg.houseCup.name) + ' house won the House Cup with ' + pg.houseCup.points + ' points.</p></div></div>';
+    let h = head('The Class of ' + S.yearName(Y), (yb.graduated ? 'Graduated on ' + fLong.format(city(S.yearOf(Y).prize)) + '. ' : 'Year 13 this year. ') + num(yb.members.length) + ' pixels.', 'The Pixel High yearbook');
+    h += '<nav class="yeartabs" aria-label="Classes">' + [Y - 1, Y, Y + 1].filter((y) => y >= S.FIRST_YEAR).map((y) => '<a href="' + AT + '#/yearbook/' + y + '"' + (y === Y ? ' aria-current="page"' : '') + '>Class of ' + S.yearName(y) + '</a>').join('') + '</nav>';
+    if (pg.happened) h += '<div class="crown"><span class="sw" style="--c:' + pg.dux.color + '"><i></i></span><div><p>Dux of Pixel High, ' + S.yearName(Y) + '</p><h2>' + link('student/' + pg.dux.id, esc(pg.dux.name)) + '</h2><p>Proxime accessit: ' + esc(pg.proxime.name) + '. ' + esc(pg.houseCup.name) + ' house won the House Cup with ' + pg.houseCup.points + ' points.</p></div></div>';
     h += '<h2>Voted by the class</h2><ul class="sup">' + yb.superlatives.map((s) => '<li><span>' + esc(s.title) + '</span>' + link('student/' + s.winner.id, esc(s.winner.name)) + '</li>').join('') + '</ul>';
     if (pg.happened) h += '<h2>Subject cups</h2><ul class="sup">' + pg.cups.map((c) => '<li><span>' + esc(c.subject) + '</span>' + link('student/' + c.winner.id, esc(c.winner.name)) + '</li>').join('') + '</ul>';
     h += '<h2>The class</h2><ul class="tiles">' + yb.members.slice(0, 240).map((m) => tile({ id: m.id, name: m.name, color: m.color, house: m.house }, m.house + ', ' + m.form)).join('') + '</ul>';
